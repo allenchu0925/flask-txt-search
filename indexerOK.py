@@ -9,7 +9,8 @@ def clear_existing_index():
     if os.path.exists(INDEX_DB_PATH):
         conn = sqlite3.connect(INDEX_DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM txt_index")
+        # 因為使用 FTS5 虛擬表格，直接刪除重建
+        cursor.execute("DROP TABLE IF EXISTS txt_index")
         conn.commit()
         conn.close()
         print("已清除索引資料！")
@@ -20,12 +21,9 @@ def create_index():
     conn = sqlite3.connect(INDEX_DB_PATH)
     cursor = conn.cursor()
 
-    # 建立表格（如果不存在）
+    # 建立 FTS5 虛擬表格
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS txt_index (
-            file_name TEXT,
-            content TEXT
-        )
+        CREATE VIRTUAL TABLE IF NOT EXISTS txt_index USING fts5(file_name, content, tokenize='unicode61')
     """)
     conn.commit()
 

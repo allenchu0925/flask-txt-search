@@ -22,8 +22,11 @@ def search():
         print(f"[SEARCH] 收到的搜尋字串: {input_text}")
 
         conn = sqlite3.connect(INDEX_DB_PATH)
+        # 啟用 WAL 模式，提升並發性能
+        conn.execute("PRAGMA journal_mode=WAL")
         cursor = conn.cursor()
-        cursor.execute("SELECT file_name, content FROM txt_index WHERE content LIKE ?", ('%' + input_text + '%',))
+        # 使用 FTS5 的 MATCH 運算子進行全文檢索
+        cursor.execute("SELECT file_name, content FROM txt_index WHERE content MATCH ?", (input_text,))
         results = [{"file_name": row[0], "count": row[1].count(input_text)} for row in cursor.fetchall()]
         conn.close()
 
