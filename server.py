@@ -9,6 +9,11 @@ CORS(app)
 TXT_FOLDER_PATH = "./output_txt"
 INDEX_DB_PATH = "txt_index.db"
 
+# 新增根路由
+@app.route('/')
+def home():
+    return "Welcome to Flask Text Search! Use /search to search for text or /txt/<filename> to view a file."
+
 @app.route('/search', methods=['POST'])
 def search():
     try:
