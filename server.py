@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # 定義版本號
-VERSION = "v1.1.0"
+VERSION = "v1.2.0"
 
 TXT_FOLDER_PATH = "./output_txt"
 INDEX_DB_PATH = "txt_index.db"
@@ -107,6 +107,61 @@ def list_files():
         elapsed_time = time.time() - start_time
         print(f"[LIST-FILES] [Version: {VERSION}] Error listing files: {e} after {elapsed_time:.2f} seconds")
         return jsonify({"error": "無法列出檔案"}), 500
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    start_time = time.time()
+    try:
+        print(f"[UPLOAD] [Version: {VERSION}] Received upload request")
+        
+        # 檢查密碼
+        password = request.form.get('password')
+        ADMIN_PASSWORD = "your_secure_password"  # 請替換為你的實際密碼
+        if password != ADMIN_PASSWORD:
+            elapsed_time = time.time() - start_time
+            print(f"[UPLOAD] [Version: {VERSION}] Invalid password attempt after {elapsed_time:.2f} seconds")
+            return jsonify({"error": "密碼錯誤"}), 403
+
+        # 檢查檔案
+        if 'file' not in request.files:
+            elapsed_time = time.time() - start_time
+            print(f"[UPLOAD] [Version: {VERSION}] No file part in request after {elapsed_time:.2f} seconds")
+            return jsonify({"error": "沒有選擇檔案"}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            elapsed_time = time.time() - start_time
+            print(f"[UPLOAD] [Version: {VERSION}] No selected file after {elapsed_time:.2f} seconds")
+            return jsonify({"error": "沒有選擇檔案"}), 400
+
+        # 儲存檔案
+        if not os.path.exists(TXT_FOLDER_PATH):
+            os.makedirs(TXT_FOLDER_PATH)
+            print(f"[UPLOAD] [Version: {VERSION}] Created directory: {TXT_FOLDER_PATH}")
+
+        file_path = os.path.join(TXT_FOLDER_PATH, file.filename)
+        file.save(file_path)
+        print(f"[UPLOAD] [Version: {VERSION}] File saved: {file_path}")
+
+        # 讀取檔案內容並更新資料庫
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        conn = sqlite3.connect(INDEX_DB_PATH)
+        conn.execute("PRAGMA journal_mode=WAL")
+        cursor = conn.cursor()
+        cursor.execute("INSERT OR REPLACE INTO txt_index (file_name, content) VALUES (?, ?)", (file.filename, content))
+        conn.commit()
+        conn.close()
+        print(f"[UPLOAD] [Version: {VERSION}] Database updated for file: {file.filename}")
+
+        elapsed_time = time.time() - start_time
+        print(f"[UPLOAD] [Version: {VERSION}] File {file.filename} uploaded and indexed successfully in {elapsed_time:.2f} seconds")
+        return jsonify({"message": f"檔案 {file.filename} 上傳成功並已更新資料庫"})
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        print(f"[UPLOAD] [Version: {VERSION}] Error during upload: {e} after {elapsed_time:.2f} seconds")
+        return jsonify({"error": "上傳過程中發生錯誤"}), 500
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 8000))
