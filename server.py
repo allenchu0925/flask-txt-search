@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # 定義版本號
-VERSION = "v1.0.0"
+VERSION = "v1.1.0"
 
 TXT_FOLDER_PATH = "./output_txt"
 INDEX_DB_PATH = "txt_index.db"
@@ -49,32 +49,4 @@ def search():
         print(f"[SEARCH] [Version: {VERSION}] Error occurred: {e} after {elapsed_time:.2f} seconds")
         return jsonify({"error": "搜尋過程中發生錯誤"}), 500
 
-@app.route('/txt/<filename>', methods=['GET'])
-def get_txt_content(filename):
-    start_time = time.time()  # 記錄開始時間
-    try:
-        print(f"[TXT CONTENT] [Version: {VERSION}] Received request for file: {filename}")
-        file_path = os.path.join(TXT_FOLDER_PATH, filename)
-        file_path = os.path.normpath(file_path)
-        print(f"[TXT CONTENT] [Version: {VERSION}] File path: {file_path}")
-
-        if not os.path.exists(file_path):
-            elapsed_time = time.time() - start_time
-            print(f"[TXT CONTENT] [Version: {VERSION}] File not found: {file_path} after {elapsed_time:.2f} seconds")
-            return jsonify({"error": f"檔案 {filename} 不存在"}), 404
-
-        with open(file_path, 'r', encoding='utf-8') as file:
-            text = file.read()
-
-        elapsed_time = time.time() - start_time
-        print(f"[TXT CONTENT] [Version: {VERSION}] Successfully read file (length: {len(text)} characters) in {elapsed_time:.2f} seconds")
-        return jsonify({"content": text.replace("\n", "<br>")})
-    except Exception as e:
-        elapsed_time = time.time() - start_time
-        print(f"[TXT CONTENT] [Version: {VERSION}] Error reading file '{filename}': {e} after {elapsed_time:.2f} seconds")
-        return jsonify({"error": f"無法讀取檔案 {filename}"}), 500
-
-if __name__ == "__main__":
-    port = int(os.getenv('PORT', 8000))
-    print(f"[START] [Version: {VERSION}] Server running on port {port}")
-    app.run(host='0.0.0.0', port=port)
+@app.route('/txt/<filename>', methods
