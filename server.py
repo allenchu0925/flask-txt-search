@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # 定義版本號
-VERSION = "v1.3.0"
+VERSION = "v1.4.0"
 
 TXT_FOLDER_PATH = "./output_txt"
 INDEX_DB_PATH = "txt_index.db"
@@ -173,6 +173,58 @@ def serve_admin_files(filename):
     except Exception as e:
         print(f"[ADMIN FILE] [Version: {VERSION}] Error serving file '{filename}': {e}")
         return jsonify({"error": f"無法提供檔案 {filename}"}), 404
+
+# 新增路由以刪除檔案
+@app.route('/delete', methods=['POST'])
+def delete_file():
+    start_time = time.time()
+    try:
+        print(f"[DELETE] [Version: {VERSION}] Received delete request")
+        
+        # 檢查密碼
+        data = request.json
+        password = data.get('password')
+        ADMIN_PASSWORD = "your_secure_password"  # 請替換為你的實際密碼
+        if password != ADMIN_PASSWORD:
+            elapsed_time = time.time() - start_time
+            print(f"[DELETE] [Version: {VERSION}] Invalid password attempt after {elapsed_time:.2f} seconds")
+            return jsonify({"error": "密碼錯誤"}), 403
+
+        # 檢查檔案名稱
+        filename = data.get('filename')
+        if not filename:
+            elapsed_time = time.time() - start_time
+            print(f"[DELETE] [Version: {VERSION}] No filename provided after {elapsed_time:.2f} seconds")
+            return jsonify({"error": "未提供檔案名稱"}), 400
+
+        # 檢查檔案是否存在
+        file_path = os.path.join(TXT_FOLDER_PATH, filename)
+        file_path = os.path.normpath(file_path)
+        if not os.path.exists(file_path):
+            elapsed_time = time.time() - start_time
+            print(f"[DELETE] [Version: {VERSION}] File not found: {file_path} after {elapsed_time:.2f} seconds")
+            return jsonify({"error": f"檔案 {filename} 不存在"}), 404
+
+        # 從檔案系統中刪除檔案
+        os.remove(file_path)
+        print(f"[DELETE] [Version: {VERSION}] File deleted from filesystem: {file_path}")
+
+        # 從資料庫中刪除索引
+        conn = sqlite3.connect(INDEX_DB_PATH)
+        conn.execute("PRAGMA journal_mode=WAL")
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM txt_index WHERE file_name = ?", (filename,))
+        conn.commit()
+        conn.close()
+        print(f"[DELETE] [Version: {VERSION}] Database record deleted for file: {filename}")
+
+        elapsed_time = time.time() - start_time
+        print(f"[DELETE] [Version: {VERSION}] File {filename} deleted successfully in {elapsed_time:.2f} seconds")
+        return jsonify({"message": f"檔案 {filename} 已成功刪除"})
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        print(f"[DELETE] [Version: {VERSION}] Error during deletion: {e} after {elapsed_time:.2f} seconds")
+        return jsonify({"error": "刪除過程中發生錯誤"}), 500
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 8000))
