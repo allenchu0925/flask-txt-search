@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import sqlite3
 import time
@@ -8,10 +8,11 @@ app = Flask(__name__)
 CORS(app)
 
 # 定義版本號
-VERSION = "v1.2.0"
+VERSION = "v1.3.0"
 
 TXT_FOLDER_PATH = "./output_txt"
 INDEX_DB_PATH = "txt_index.db"
+ADMIN_FOLDER_PATH = "./admin"
 
 # 啟動時記錄版本號和服務資訊
 print(f"[START] Flask Text Search Server {VERSION} starting...")
@@ -162,6 +163,16 @@ def upload_file():
         elapsed_time = time.time() - start_time
         print(f"[UPLOAD] [Version: {VERSION}] Error during upload: {e} after {elapsed_time:.2f} seconds")
         return jsonify({"error": "上傳過程中發生錯誤"}), 500
+
+# 新增路由以提供 admin 資料夾中的靜態檔案
+@app.route('/admin/<path:filename>')
+def serve_admin_files(filename):
+    try:
+        print(f"[ADMIN FILE] [Version: {VERSION}] Serving file: {filename}")
+        return send_from_directory(ADMIN_FOLDER_PATH, filename)
+    except Exception as e:
+        print(f"[ADMIN FILE] [Version: {VERSION}] Error serving file '{filename}': {e}")
+        return jsonify({"error": f"無法提供檔案 {filename}"}), 404
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 8000))
