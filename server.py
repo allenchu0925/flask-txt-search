@@ -49,4 +49,66 @@ def search():
         print(f"[SEARCH] [Version: {VERSION}] Error occurred: {e} after {elapsed_time:.2f} seconds")
         return jsonify({"error": "搜尋過程中發生錯誤"}), 500
 
-@app.route('/txt/<filename>', methods
+@app.route('/txt/<filename>', methods=['GET'])
+def get_txt_content(filename):
+    start_time = time.time()  # 記錄開始時間
+    try:
+        print(f"[TXT CONTENT] [Version: {VERSION}] Received request for file: {filename}")
+        file_path = os.path.join(TXT_FOLDER_PATH, filename)
+        file_path = os.path.normpath(file_path)
+        print(f"[TXT CONTENT] [Version: {VERSION}] File path: {file_path}")
+
+        if not os.path.exists(file_path):
+            elapsed_time = time.time() - start_time
+            print(f"[TXT CONTENT] [Version: {VERSION}] File not found: {file_path} after {elapsed_time:.2f} seconds")
+            return jsonify({"error": f"檔案 {filename} 不存在"}), 404
+
+        with open(file_path, 'r', encoding='utf-8') as file:
+            text = file.read()
+
+        elapsed_time = time.time() - start_time
+        print(f"[TXT CONTENT] [Version: {VERSION}] Successfully read file (length: {len(text)} characters) in {elapsed_time:.2f} seconds")
+        return jsonify({"content": text.replace("\n", "<br>")})
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        print(f"[TXT CONTENT] [Version: {VERSION}] Error reading file '{filename}': {e} after {elapsed_time:.2f} seconds")
+        return jsonify({"error": f"無法讀取檔案 {filename}"}), 500
+
+@app.route('/list-files', methods=['GET'])
+def list_files():
+    start_time = time.time()
+    try:
+        print(f"[LIST-FILES] [Version: {VERSION}] Listing files and folders")
+        
+        # 列出根目錄下的檔案和資料夾
+        root_files = os.listdir('.')
+        print(f"[LIST-FILES] [Version: {VERSION}] Root directory contents: {root_files}")
+        
+        # 列出 ./output_txt 資料夾的內容（如果存在）
+        output_txt_contents = []
+        if os.path.exists(TXT_FOLDER_PATH):
+            output_txt_contents = os.listdir(TXT_FOLDER_PATH)
+            print(f"[LIST-FILES] [Version: {VERSION}] {TXT_FOLDER_PATH} contents: {output_txt_contents}")
+        else:
+            print(f"[LIST-FILES] [Version: {VERSION}] {TXT_FOLDER_PATH} does not exist")
+        
+        # 檢查資料庫檔案是否存在
+        db_exists = os.path.exists(INDEX_DB_PATH)
+        print(f"[LIST-FILES] [Version: {VERSION}] Database file {INDEX_DB_PATH} exists: {db_exists}")
+        
+        elapsed_time = time.time() - start_time
+        print(f"[LIST-FILES] [Version: {VERSION}] File listing completed in {elapsed_time:.2f} seconds")
+        return jsonify({
+            "root_files": root_files,
+            "output_txt_contents": output_txt_contents,
+            "database_exists": db_exists
+        })
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        print(f"[LIST-FILES] [Version: {VERSION}] Error listing files: {e} after {elapsed_time:.2f} seconds")
+        return jsonify({"error": "無法列出檔案"}), 500
+
+if __name__ == "__main__":
+    port = int(os.getenv('PORT', 8000))
+    print(f"[START] [Version: {VERSION}] Server running on port {port}")
+    app.run(host='0.0.0.0', port=port)
