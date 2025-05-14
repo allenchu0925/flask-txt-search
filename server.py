@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import sqlite3
 import time
+import re
 
 app = Flask(__name__)
 CORS(app)
@@ -29,7 +30,7 @@ def search():
     try:
         print(f"[SEARCH] [Version: {VERSION}] Received search request")
         data = request.json
-        input_text = data.get("input_text", "")
+        input_text = data.get("input_text", "").strip().replace(" ", "").replace("\n", "")
         print(f"[SEARCH] [Version: {VERSION}] Search query: {input_text}")
 
         # 資料庫操作
@@ -38,9 +39,16 @@ def search():
         conn.execute("PRAGMA journal_mode=WAL")
         cursor = conn.cursor()
         print(f"[SEARCH] [Version: {VERSION}] Executing search query...")
-        cursor.execute("SELECT file_name, content FROM txt_index WHERE content MATCH ?", (input_text,))
+        cursor.execute("SELECT file_name, content FROM txt_index WHERE content LIKE ? COLLATE BINARY", ('%' + input_text + '%',))
         results = [{"file_name": row[0], "count": row[1].count(input_text)} for row in cursor.fetchall()]
         conn.close()
+
+        # 按文件名中的數字部分進行數值排序
+        def extract_number(filename):
+            match = re.match(r'(\d+)_', filename)
+            return int(match.group(1)) if match else float('inf')
+
+        results.sort(key=lambda x: extract_number(x["file_name"]))
 
         elapsed_time = time.time() - start_time
         print(f"[SEARCH] [Version: {VERSION}] Search completed, found {len(results)} results in {elapsed_time:.2f} seconds")
