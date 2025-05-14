@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
 import os
-import re
 
 app = Flask(__name__)
 CORS(app)
@@ -22,13 +21,7 @@ def search():
         cursor.execute("SELECT file_name, content FROM txt_index WHERE content LIKE ? COLLATE BINARY", ('%' + input_text + '%',))
         results = [{"file_name": row[0], "count": row[1].count(input_text)} for row in cursor.fetchall()]
         conn.close()
-
-        # 按文件名中的數字部分進行數值排序
-        def extract_number(filename):
-            match = re.match(r'(\d+)_', filename)
-            return int(match.group(1)) if match else float('inf')
-
-        results.sort(key=lambda x: extract_number(x["file_name"]))
+	results.sort(key=lambda x: x["file_name"])  # 按文件名排序
 
         print(f"[SEARCH] 搜尋完成，共找到 {len(results)} 個相關結果")
         return jsonify(results)
